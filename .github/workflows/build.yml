@@ -1,78 +1,13 @@
-name: Build WCLiquidArc
-
-on:
-  push:
-  workflow_dispatch:
-
+name: B
+on: [push, workflow_dispatch]
 jobs:
-  build:
+  b:
     runs-on: macos-14
     steps:
       - uses: actions/checkout@v4
-
-      - name: Normalize layout
-        run: |
-          ls -la
-          for z in *.zip; do
-            [ -f "$z" ] || continue
-            unzip -q "$z" -d _unz || true
-            cp -R _unz/liquidbar/. . 2>/dev/null || true
-            cp -R _unz/. . 2>/dev/null || true
-          done
-          if [ ! -d src ]; then
-            mkdir -p src
-            mv *.m *.h src/ 2>/dev/null || true
-          fi
-          printf '%s\n' \
-            'export TARGET = iphone:clang:latest:15.0' \
-            'export ARCHS = arm64 arm64e' \
-            'export DEBUG = 0' \
-            '' \
-            'TWEAK_NAME = WCLiquidArc' \
-            'WCLiquidArc_FILES = $(wildcard src/*.m)' \
-            'WCLiquidArc_CFLAGS = -fobjc-arc -I./src -Wno-unused-parameter -Wno-unused-variable' \
-            'WCLiquidArc_FRAMEWORKS = UIKit QuartzCore Foundation WebKit AVFoundation CoreGraphics' \
-            '' \
-            'include $(THEOS)/makefiles/common.mk' \
-            'include $(THEOS_MAKE_PATH)/tweak.mk' \
-            > Makefile
-          cat Makefile
-          ls src
-
-      - name: Install Theos
-        run: |
-          export THEOS=$HOME/theos
-          git clone --recursive --depth 1 https://github.com/theos/theos.git $THEOS
-          mkdir -p $THEOS/sdks
-          curl -fsSL -o /tmp/sdks.tar.gz https://github.com/theos/sdks/archive/refs/heads/master.tar.gz
-          tar -xzf /tmp/sdks.tar.gz -C /tmp
-          cp -R /tmp/sdks-master/*.sdk $THEOS/sdks/ || true
-          ls $THEOS/sdks
-          echo "THEOS=$THEOS" >> $GITHUB_ENV
-
-      - name: Install ldid
-        run: |
-          brew install ldid dpkg || true
-          curl -fsSL -o /tmp/ldid https://github.com/ProcursusTeam/ldid/releases/latest/download/ldid_macosx_arm64 || true
-          if [ -s /tmp/ldid ]; then chmod +x /tmp/ldid; sudo cp /tmp/ldid /usr/local/bin/ldid; fi
-
-      - name: Build
-        run: |
-          export THEOS=$HOME/theos
-          export PATH=$THEOS/bin:$PATH
-          make clean || true
-          make -j4 2>&1 | tee build.log
-          find . -name "*.dylib" -not -path "./.git/*"
-
-      - name: Collect
-        run: |
-          mkdir -p out
-          find . -name "WCLiquidArc.dylib" -not -path "./.git/*" -exec cp {} out/ \; || true
-          cp build.log out/ || true
-          ls -la out
-
+      - run: bash build.sh
       - uses: actions/upload-artifact@v4
         if: always()
         with:
-          name: WCLiquidArc-build
-          path: out/
+          name: out
+          path: out
